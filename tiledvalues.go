@@ -96,7 +96,6 @@ type tmjLayer struct {
 	Name        string          `json:"name"`
 	Width       int             `json:"width"`
 	Height      int             `json:"height"`
-	Encoding    string          `json:"encoding"`
 	Compression string          `json:"compression"`
 	Data        json.RawMessage `json:"data"`
 	Chunks      []tmjChunk      `json:"chunks"`
