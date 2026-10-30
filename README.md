@@ -11,8 +11,7 @@
 
 Bounded PNG alpha masks, grid-cell projection and Tiled TMX/TMJ occupied-tile decoding for game art. Package `tilemask`, module `github.com/Rethunk-Tech/go-tilemask`.
 
-<!-- scaffold: one short paragraph on what the package guarantees and why it exists, in plain
-words. -->
+Answers one question about game art: which cells of an image, or which tiles of a map, are used. A cell is a square of a size the caller picks. A PNG becomes a one-bit-per-pixel mask (alpha not zero) that projects onto any grid, and a Tiled map becomes the occupied tiles of each top-level layer. Both decoders bound what their input claims (pixels, tiles, inflation) before allocating, so a few hostile bytes cannot ask for gigabytes. The caller bounds the input's byte size. Stdlib only.
 
 ## Quick start
 
@@ -24,7 +23,12 @@ A worked example and the contracts: [HUMANS.md](HUMANS.md).
 
 ## Features
 
-<!-- scaffold: 3 to 6 bullets, each a capability a caller can rely on. No roadmap. -->
+- A pixel is set when its alpha is not zero, at any bit depth; `Mask.At` and `Mask.Cells` read it.
+- `Cells` projects any region onto any cell size with floor division, so negative offsets land in negative cells. `cell = 1` costs one byte per pixel while it runs.
+- The PNG fast path reads 8-bit, non-interlaced images and checks no CRC or Adler-32, needs no `PLTE`, and needs no `IDAT` for an opaque grey or RGB image; each leniency errs toward more coverage. Everything else goes through `image/png`.
+- `DecodeMap` reads TMX and TMJ under one tile cap for the whole map, declared and decoded, and refuses a layer or chunk that holds more values than it declared.
+- `WriteTo` and `ReadMask` store a mask as gzip of `W H\n` and the packed bits, least-significant bit first; the reader holds the header to the pixel cap and verifies the gzip trailer.
+- Errors say why: `ErrTooLarge`, `ErrUnsupported` (zstd, unknown encodings) or `ErrMalformed`.
 
 ## Documentation
 
