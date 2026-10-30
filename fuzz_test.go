@@ -42,3 +42,32 @@ func FuzzDecodePNG(f *testing.F) {
 		}
 	})
 }
+
+func FuzzReadMask(f *testing.F) {
+	var good bytes.Buffer
+	if _, err := patternMask(19, 5).WriteTo(&good); err != nil {
+		f.Fatal(err)
+	}
+	f.Add(good.Bytes())
+	for _, header := range []string{"65536 65536\n", "4294967296 4294967296\n", "9223372036854775807 2\n", "1 1\n"} {
+		f.Add(gzipped(f, header))
+	}
+	f.Fuzz(func(t *testing.T, raw []byte) {
+		const limit = 1 << 20
+		m, err := ReadMask(bytes.NewReader(raw), Options{MaxPixels: limit})
+		if err != nil {
+			return
+		}
+		if int64(m.Width)*int64(m.Height) > limit {
+			t.Fatalf("mask %d x %d exceeds the cap", m.Width, m.Height)
+		}
+		var out bytes.Buffer
+		if _, err := m.WriteTo(&out); err != nil {
+			t.Fatal(err)
+		}
+		again, err := ReadMask(&out, Options{MaxPixels: limit})
+		if err != nil || !masksEqual(again, m) {
+			t.Fatalf("a mask that was read does not read back: %v", err)
+		}
+	})
+}
