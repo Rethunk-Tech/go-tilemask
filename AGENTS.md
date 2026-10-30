@@ -12,7 +12,7 @@ cannot resolve that check from PATH.
 - Every size check goes through `areaWithin`, which divides rather than multiplies: a declared size whose product wraps negative would otherwise pass.
 - A cap is checked before the allocation it guards: `MaxPixels` before any pixel buffer or mask bits, `MaxTiles` over the whole map before any data inflates.
 - The tile budget is the declared size of each layer or chunk: a block decodes at most `width x height` values and more is `ErrMalformed`, so decode memory does not follow the caller's byte cap.
-- Error classes: `ErrTooLarge` a cap, `ErrUnsupported` a well-formed input we do not read, `ErrMalformed` everything else. Callers branch on these, so a new failure picks one.
+- Error classes: `ErrTooLarge` a cap, `ErrUnsupported` a well-formed input this package does not read, `ErrMalformed` everything else. Callers branch on these, so a new failure picks one.
 - The PNG fast path and `image/png` must agree whenever both accept an input (`FuzzDecodePNG`). The fast path skips checksums and needs no `PLTE`/`IDAT` in some cases, always toward more coverage; do not add validation there, since it exists to skip that work.
 - Padding bits of a `Mask` stay zero, so equal masks hold equal bytes and the file format is reproducible.
 - The mask file format is a stored contract: `testdata/mask-gzip-19x5.gz` is read and rewritten byte for byte. Change the format only with a reader for the old one.

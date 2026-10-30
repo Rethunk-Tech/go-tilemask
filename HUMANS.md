@@ -43,12 +43,12 @@ func main() {
 
 ## Contracts
 
-| Call | Contract |
+| Behaviour | Contract |
 | --- | --- |
-| `DecodePNG` | Reads the reader to the end. Refuses a claimed size over `MaxPixels` (`ErrTooLarge`) before allocating a pixel buffer, at any bit depth. Reads no CRC and no Adler-32 on the fast path; an image that is not a PNG or cannot be decoded is `ErrMalformed`. |
+| `DecodePNG` | Reads the reader to the end. Refuses a claimed size over `MaxPixels` (`ErrTooLarge`) before allocating a pixel buffer, at any bit depth. The fast path (8-bit, non-interlaced) checks no CRC or Adler-32, needs no `PLTE`, and needs no `IDAT` for an opaque grey or RGB image, each erring toward more coverage; an image that is not a PNG or cannot be decoded is `ErrMalformed`. |
 | `Mask.At` | False outside the bounds. Safe for concurrent reads. |
 | `Mask.Cells` | Row-major, each cell once, floor division. Yields nothing for `cell <= 0`, an empty clipped `src`, or a coordinate beyond a quarter of the int range. Build `src` as `image.Rectangle{Min, Max}`, not `image.Rect`, which swaps a negative extent into a positive one. |
-| `Mask.WriteTo` | Writes gzip of `W H\n` and the packed bits; refuses a mask with a non-positive size, which `ReadMask` would refuse. Never touches a path. |
+| `Mask.WriteTo` | Writes gzip of `W H\n` and the packed bits, least-significant bit first; refuses a mask with a non-positive size, which `ReadMask` would refuse. Never touches a path. |
 | `ReadMask` | Refuses a header over `MaxPixels` before allocating; a torn or flipped file fails the gzip trailer (`ErrMalformed`). Cap it with the same `MaxPixels` the mask was decoded under so every mask written reads back. |
 | `DecodeMap` | Top-level tile layers only, in document order; layer names verbatim. Occupied is GID not zero, flip bits included. Declared sizes of all layers and chunks together must fit `MaxTiles` (`ErrTooLarge`) before any data inflates; a layer or chunk with more values than width times height is `ErrMalformed`. zstd and unknown encodings are `ErrUnsupported` and fail the whole map. |
 | `MapSize` | Header only: TMX stops at the root `<map>` element whatever the attribute order; TMJ reads the top-level object. A size that is missing or not positive is `ErrMalformed`. |
