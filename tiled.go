@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"math"
 	"strconv"
 )
 
@@ -105,7 +106,7 @@ func checkDeclared(layers []layerSpec, maxTiles int64) error {
 	var total int64
 	for _, spec := range layers {
 		for _, b := range spec.blocks {
-			if b.w < 0 || b.h < 0 || b.x != int(int32(b.x)) || b.y != int(int32(b.y)) {
+			if b.w < 0 || b.h < 0 || b.x < math.MinInt32 || b.x > math.MaxInt32 || b.y < math.MinInt32 || b.y > math.MaxInt32 {
 				return fmt.Errorf("%w: layer %q block %d,%d size %d x %d", ErrMalformed, spec.name, b.x, b.y, b.w, b.h)
 			}
 			if !areaWithin(b.w, b.h, maxTiles-total) {
@@ -124,7 +125,10 @@ func MapSize(r io.Reader, f Format) (w, h int, err error) {
 	case TMX:
 		w, h, err = tmxSize(r)
 	case TMJ:
-		var m struct{ Width, Height int }
+		var m struct {
+			Width  int `json:"width"`
+			Height int `json:"height"`
+		}
 		if jerr := json.NewDecoder(r).Decode(&m); jerr != nil {
 			return 0, 0, fmt.Errorf("%w: %w", ErrMalformed, jerr)
 		}

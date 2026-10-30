@@ -36,10 +36,10 @@ func DecodePNG(r io.Reader, opts Options) (*Mask, error) {
 }
 
 type pngHeader struct {
-	w, h                                 int
-	bitDepth, colorType, interlace       byte
-	trns, idat                           []byte
-	seen                                 bool
+	w, h                           int
+	bitDepth, colorType, interlace byte
+	trns, idat                     []byte
+	seen                           bool
 }
 
 func parsePNGChunks(raw []byte) (pngHeader, error) {
@@ -150,10 +150,10 @@ func pngAlphaSet(hd pngHeader, pix []byte, x int) bool {
 	trns := hd.trns
 	switch hd.colorType {
 	case 0:
-		return !(len(trns) >= 2 && pix[x] == trns[1])
+		return len(trns) < 2 || pix[x] != trns[1]
 	case 2:
 		off := x * 3
-		return !(len(trns) >= 6 && pix[off] == trns[1] && pix[off+1] == trns[3] && pix[off+2] == trns[5])
+		return len(trns) < 6 || pix[off] != trns[1] || pix[off+1] != trns[3] || pix[off+2] != trns[5]
 	case 3:
 		if idx := int(pix[x]); idx < len(trns) {
 			return trns[idx] != 0

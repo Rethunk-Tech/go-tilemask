@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"encoding/binary"
 	"hash/crc32"
+	"math"
 	"testing"
 )
 
@@ -20,10 +21,18 @@ type pngSpec struct {
 }
 
 func pngChunk(kind string, data []byte) []byte {
-	out := binary.BigEndian.AppendUint32(nil, uint32(len(data)))
+	out := binary.BigEndian.AppendUint32(nil, u32(len(data)))
 	out = append(out, kind...)
 	out = append(out, data...)
 	return binary.BigEndian.AppendUint32(out, crc32.ChecksumIEEE(out[4:]))
+}
+
+// u32 narrows a test size, which is always small.
+func u32(n int) uint32 {
+	if n < 0 || n > math.MaxUint32 {
+		panic("size out of range")
+	}
+	return uint32(n)
 }
 
 func ihdr(w, h uint32, bitDepth, color, interlace byte) []byte {
@@ -86,7 +95,7 @@ func buildPNG(t testing.TB, s pngSpec) []byte {
 		t.Fatal(err)
 	}
 	out := []byte(pngSignature)
-	out = append(out, pngChunk("IHDR", ihdr(uint32(s.w), uint32(s.h), 8, s.color, 0))...)
+	out = append(out, pngChunk("IHDR", ihdr(u32(s.w), u32(s.h), 8, s.color, 0))...)
 	if s.palette != nil {
 		out = append(out, pngChunk("PLTE", s.palette)...)
 	}
@@ -105,9 +114,9 @@ func pseudoBytes(n int, seed uint32) []byte {
 	for i := range out {
 		seed = seed*1664525 + 1013904223
 		if seed>>28 < 9 {
-			out[i] = common[seed>>8%uint32(len(common))]
+			out[i] = common[int(seed>>8)%len(common)]
 		} else {
-			out[i] = byte(seed >> 16)
+			out[i] = byte(seed >> 16 & 0xff)
 		}
 	}
 	return out

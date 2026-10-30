@@ -187,7 +187,7 @@ func TestDecodeMapHoldsEveryEncodingToTheDeclaredSize(t *testing.T) {
 		"tmx tiles":      {tmx(tmxLayerOf("L", 2, 2, `<data>`+tiles+`</data>`)), TMX},
 		"tmx base64":     {tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64">`+compressed(t, "", gids(raw...))+`</data>`)), TMX},
 		"tmx chunk csv":  {tmx(`<layer name="L" width="0" height="0"><data encoding="csv"><chunk x="0" y="0" width="2" height="2">` + many + `</chunk></data></layer>`), TMX},
-		"tmx height 0":   {tmx(tmxLayerOf("L", 2, 0, `<data encoding="csv">1,1</data>`)), TMX},
+		"tmx height 0":   {tmx(tmxLayerOf("Z", 2, 0, `<data encoding="csv">1,1</data>`)), TMX},
 		"tmj array":      {`{"width":2,"height":2,"layers":[{"name":"L","width":2,"height":2,"data":` + array + `}]}`, TMJ},
 		"tmj chunk":      {`{"layers":[{"name":"L","chunks":[{"x":0,"y":0,"width":2,"height":2,"data":` + array + `}]}]}`, TMJ},
 		"tmj base64":     {`{"layers":[{"name":"L","width":2,"height":2,"data":"` + compressed(t, "", gids(raw...)) + `"}]}`, TMJ},

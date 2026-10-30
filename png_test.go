@@ -117,11 +117,12 @@ func TestDecodePNGRefusesWhatIsNotAPNG(t *testing.T) {
 	t.Parallel()
 	good := buildPNG(t, pngSpec{w: 2, h: 2, color: 6, px: pseudoBytes(16, 1)})
 	for name, raw := range map[string][]byte{
-		"empty":         nil,
-		"text":          []byte("not a png at all"),
-		"truncated":     good[:len(good)-20],
-		"bad chunk len": append([]byte(pngSignature), 0xff, 0xff, 0xff, 0xff, 'I', 'H', 'D', 'R'),
-		"no ihdr":       append([]byte(pngSignature), pngChunk("IEND", nil)...),
+		"empty":               nil,
+		"text":                []byte("not a png at all"),
+		"truncated":           good[:len(good)-20],
+		"bad chunk len":       append([]byte(pngSignature), 0xff, 0xff, 0xff, 0xff, 'I', 'H', 'D', 'R'),
+		"interlaced, no data": append([]byte(pngSignature), pngChunk("IHDR", ihdr(2, 2, 8, 6, 1))...),
+		"no ihdr":             append([]byte(pngSignature), pngChunk("IEND", nil)...),
 	} {
 		if _, err := DecodePNG(bytes.NewReader(raw), Options{}); !errors.Is(err, ErrMalformed) {
 			t.Errorf("%s: err = %v, want ErrMalformed", name, err)
