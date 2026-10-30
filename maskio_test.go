@@ -114,6 +114,19 @@ func TestReadMaskRefusesDamage(t *testing.T) {
 	}
 }
 
+func TestReadMaskClearsPaddingBits(t *testing.T) {
+	t.Parallel()
+	m, err := ReadMask(bytes.NewReader(gzipped(t, "3 3\n\xff\xff")), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := newMask(3, 3)
+	want.setAll()
+	if !masksEqual(m, want) {
+		t.Fatalf("bits = %08b, want 11111111 00000001", m.bits)
+	}
+}
+
 func TestWriteToRefusesWhatReadMaskWould(t *testing.T) {
 	t.Parallel()
 	for _, m := range []*Mask{{}, {Width: 3, Height: 3}} {

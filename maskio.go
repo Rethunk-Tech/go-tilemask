@@ -64,6 +64,9 @@ func ReadMask(r io.Reader, opts Options) (*Mask, error) {
 	if _, err := io.ReadFull(br, m.bits); err != nil {
 		return nil, fmt.Errorf("%w: bits: %w", ErrMalformed, err)
 	}
+	if rem := w * h & 7; rem != 0 {
+		m.bits[len(m.bits)-1] &= 1<<rem - 1
+	}
 	if _, err := io.Copy(io.Discard, br); err != nil {
 		return nil, fmt.Errorf("%w: trailer: %w", ErrMalformed, err)
 	}
