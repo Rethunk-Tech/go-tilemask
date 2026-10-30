@@ -71,3 +71,33 @@ func FuzzReadMask(f *testing.F) {
 		}
 	})
 }
+
+func FuzzDecodeMap(f *testing.F) {
+	bomb := `<layer name="L" width="2" height="2"><data encoding="base64" compression="zlib">` + compressed(f, "zlib", make([]byte, 1<<16)) + `</data></layer>`
+	chunk := `<chunk x="0" y="0" width="1000" height="1000"></chunk>`
+	wide := `<layer name="L" width="0" height="0"><data encoding="csv">` + chunk + chunk + chunk + chunk + chunk + `</data></layer>`
+	wrap := `<layer name="L" width="0" height="0"><data encoding="csv"><chunk x="0" y="0" width="4611686018427387904" height="2"></chunk>` + chunk + `</data></layer>`
+	for _, doc := range []string{bomb, wide, wrap} {
+		f.Add([]byte(`<map width="4" height="4">`+doc+`</map>`), true)
+	}
+	f.Add([]byte(`{"width":2,"layers":[{"name":"L","width":2,"height":2,"encoding":"base64","data":"AQAAAAAAAAAAAAAAAQAAAA=="}]}`), false)
+	f.Add([]byte(`{"layers":[{"name":"L","chunks":[{"x":2147483647,"y":0,"width":2,"height":1,"data":[1,1]}]}]}`), false)
+	f.Fuzz(func(t *testing.T, raw []byte, xmlFormat bool) {
+		format := TMJ
+		if xmlFormat {
+			format = TMX
+		}
+		const limit = 1 << 16
+		m, err := DecodeMap(bytes.NewReader(raw), format, Options{MaxTiles: limit})
+		if err != nil {
+			return
+		}
+		var tiles int
+		for _, l := range m.Layers {
+			tiles += len(l.Tiles)
+		}
+		if tiles > limit {
+			t.Fatalf("%d tiles decoded under a cap of %d", tiles, limit)
+		}
+	})
+}
