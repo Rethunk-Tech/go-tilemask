@@ -6,6 +6,8 @@ Notable changes to `go-tilemask`. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-29
+
 ### Added
 
 - `DecodePNG`: a bounded PNG decoder that returns a one-bit-per-pixel `Mask` of pixels with alpha not zero, with the pixel cap checked before any buffer is allocated.
@@ -14,4 +16,5 @@ Notable changes to `go-tilemask`. The format follows
 - `DecodeMap`: reads Tiled TMX and TMJ maps (CSV, tile lists, base64 with none, zlib or gzip) into each top-level tile layer's occupied tiles, under one tile cap for the whole map, with no layer or chunk allowed more values than it declared.
 - `MapSize`: reads a map's size from its root element or top-level object without decoding any layer.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-tilemask/commits/main
+[Unreleased]: https://github.com/Rethunk-Tech/go-tilemask/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Rethunk-Tech/go-tilemask/releases/tag/v0.1.0
