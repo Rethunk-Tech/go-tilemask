@@ -6,4 +6,8 @@ Notable changes to `go-tilemask`. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `DecodePNG`: a bounded PNG decoder that returns a one-bit-per-pixel `Mask` of pixels with alpha not zero, with the pixel cap checked before any buffer is allocated.
+
 [Unreleased]: https://github.com/Rethunk-Tech/go-tilemask/commits/main
