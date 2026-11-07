@@ -5,7 +5,41 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
+
+// maxHeaderBytes bounds the "W H\n" line: two 64-bit decimals, a space and a newline fit well inside it.
+const maxHeaderBytes = 64
+
+// readMaskHeader reads the header line one byte at a time up to maxHeaderBytes, so a stream with no newline cannot
+// make the reader buffer it, and never echoes the input into an error.
+func readMaskHeader(br *bufio.Reader) (w, h int, err error) {
+	line := make([]byte, 0, maxHeaderBytes)
+	for {
+		b, err := br.ReadByte()
+		if err != nil {
+			return 0, 0, fmt.Errorf("%w: header: %w", ErrMalformed, err)
+		}
+		if b == '\n' {
+			break
+		}
+		if len(line) == maxHeaderBytes {
+			return 0, 0, fmt.Errorf("%w: header longer than %d bytes", ErrMalformed, maxHeaderBytes)
+		}
+		line = append(line, b)
+	}
+	ws, hs, ok := strings.Cut(string(line), " ")
+	if !ok {
+		return 0, 0, fmt.Errorf("%w: header has no size pair", ErrMalformed)
+	}
+	w, errW := strconv.Atoi(ws)
+	h, errH := strconv.Atoi(hs)
+	if errW != nil || errH != nil {
+		return 0, 0, fmt.Errorf("%w: header sizes are not integers", ErrMalformed)
+	}
+	return w, h, nil
+}
 
 // WriteTo writes the mask as gzip (best speed) of "W H\n" followed by the packed bits, and returns the compressed
 // bytes written. A mask with a non-positive size is refused, since ReadMask would refuse it.
@@ -50,9 +84,9 @@ func ReadMask(r io.Reader, opts Options) (*Mask, error) {
 		return nil, fmt.Errorf("%w: %w", ErrMalformed, err)
 	}
 	br := bufio.NewReader(zr)
-	var w, h int
-	if _, err := fmt.Fscanf(br, "%d %d\n", &w, &h); err != nil {
-		return nil, fmt.Errorf("%w: header: %w", ErrMalformed, err)
+	w, h, err := readMaskHeader(br)
+	if err != nil {
+		return nil, err
 	}
 	if w <= 0 || h <= 0 {
 		return nil, fmt.Errorf("%w: mask %d x %d", ErrMalformed, w, h)

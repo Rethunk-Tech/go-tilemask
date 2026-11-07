@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"io"
 )
@@ -47,7 +48,7 @@ func parsePNGChunks(raw []byte) (pngHeader, error) {
 	for i := 8; i+12 <= len(raw); {
 		n := int(binary.BigEndian.Uint32(raw[i:]))
 		i += 4
-		if i+4+n+4 > len(raw) {
+		if n < 0 || n > len(raw)-i-8 {
 			return hd, ErrMalformed
 		}
 		kind := string(raw[i : i+4])
@@ -228,7 +229,7 @@ func stdPNG(raw []byte, maxPixels int64) (*Mask, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrMalformed, err)
 	}
-	if !areaWithin(cfg.Width, cfg.Height, maxPixels) {
+	if !areaWithin(cfg.Width, cfg.Height, stdPixelBudget(cfg.ColorModel, maxPixels)) {
 		return nil, ErrTooLarge
 	}
 	img, err := png.Decode(bytes.NewReader(raw))
@@ -249,6 +250,17 @@ func stdPNG(raw []byte, maxPixels int64) (*Mask, error) {
 	return m, nil
 }
 
+// stdPixelBudget is the pixel count image/png may allocate for. It sizes its image by colour model: 8 bytes a pixel
+// for 16-bit colour, 4 for 8-bit colour, less for grey and palettes. The decoded bytes are held to what maxPixels
+// 8-bit colour pixels cost, so a 16-bit image gets half the pixel budget and the allocation never exceeds 4 x maxPixels.
+func stdPixelBudget(m color.Model, maxPixels int64) int64 {
+	switch m {
+	case color.RGBA64Model, color.NRGBA64Model:
+		return maxPixels / 2
+	}
+	return maxPixels
+}
+
 // hasAlpha is true for any nonzero alpha, however low and at any bit depth.
 func hasAlpha(img image.Image, x, y int) bool {
 	switch img := img.(type) {
@@ -256,6 +268,10 @@ func hasAlpha(img image.Image, x, y int) bool {
 		return img.Pix[img.PixOffset(x, y)+3] != 0
 	case *image.RGBA:
 		return img.Pix[img.PixOffset(x, y)+3] != 0
+	case *image.NRGBA64:
+		return img.Pix[img.PixOffset(x, y)+6]|img.Pix[img.PixOffset(x, y)+7] != 0
+	case *image.RGBA64:
+		return img.Pix[img.PixOffset(x, y)+6]|img.Pix[img.PixOffset(x, y)+7] != 0
 	default:
 		_, _, _, a := img.At(x, y).RGBA()
 		return a > 0

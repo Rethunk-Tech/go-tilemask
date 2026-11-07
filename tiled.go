@@ -52,7 +52,8 @@ type layerSpec struct {
 //
 // The declared sizes of every layer and chunk together must be within opts.MaxTiles, checked before any data
 // inflates (ErrTooLarge). A layer or chunk whose data holds more values than its declared width times height, or
-// whose compressed data inflates past it, is ErrMalformed, so memory use does not depend on the size of r. An
+// whose compressed data inflates past it, is ErrMalformed, so decode memory does not depend on the size of r. The parsed document is held whole, so memory also grows with
+// the bytes of r (the caller bounds those), and element nesting deeper than 64 levels is ErrMalformed. An
 // encoding or compression other than CSV, tile lists and base64 with none, zlib or gzip is ErrUnsupported, and fails
 // the whole map.
 func DecodeMap(r io.Reader, f Format, opts Options) (Map, error) {

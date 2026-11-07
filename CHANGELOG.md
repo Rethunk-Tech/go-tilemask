@@ -6,6 +6,13 @@ Notable changes to `go-tilemask`. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `ReadMask` reads its header line under a 64-byte limit; a header with no newline or a long digit run is `ErrMalformed`, and the error no longer echoes it.
+- `DecodeMap` refuses TMX element nesting deeper than 64 levels (`ErrMalformed`) instead of growing memory per level.
+- `DecodePNG` holds the `image/png` path (16-bit and interlaced images) to 4 bytes per `MaxPixels`: a 16-bit image may have at most half `MaxPixels` pixels, else `ErrTooLarge`.
+- `DecodePNG` no longer panics on 32-bit builds for a chunk length with the high bit set.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added

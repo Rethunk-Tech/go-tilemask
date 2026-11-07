@@ -14,9 +14,9 @@ Please do not open a public issue for a suspected vulnerability first.
 
 ## What is in scope
 
-- `DecodePNG`, a PNG of any size or shape: a claimed size over `MaxPixels` must be refused before any pixel buffer is allocated, with no wrapping product letting one pass, and it must not panic or read past the input.
-- `ReadMask`, a mask file: the header's size must be held to `MaxPixels` before its bits are allocated, and a damaged file must fail rather than return a wrong mask.
-- `DecodeMap` and `MapSize`, a TMX or TMJ document: the declared tiles of the whole map must be held to `MaxTiles` before any data inflates, no layer may decode more values than it declared, and chunk offsets must not wrap a tile coordinate.
+- `DecodePNG`, a PNG of any size or shape: a claimed size over `MaxPixels` (half of it for 16-bit colour, which `image/png` holds at 8 bytes a pixel) must be refused before any pixel buffer is allocated, with no wrapping product letting one pass, and it must not panic or read past the input.
+- `ReadMask`, a mask file: the header line is read under a 64-byte limit and its size held to `MaxPixels` before its bits are allocated, and a damaged file must fail rather than return a wrong mask.
+- `DecodeMap` and `MapSize`, a TMX or TMJ document: TMX element nesting is held to 64 levels, the declared tiles of the whole map must be held to `MaxTiles` before any data inflates, no layer may decode more values than it declared, and chunk offsets must not wrap a tile coordinate.
 - `Mask.Cells`, caller-chosen regions and offsets: the working set is bounded by the mask, and no coordinate sum may wrap.
 
 ## What is out of scope

@@ -29,7 +29,7 @@ func pngChunk(kind string, data []byte) []byte {
 
 // u32 narrows a test size, which is always small.
 func u32(n int) uint32 {
-	if n < 0 || n > math.MaxUint32 {
+	if n < 0 || int64(n) > math.MaxUint32 {
 		panic("size out of range")
 	}
 	return uint32(n)

@@ -50,9 +50,33 @@ type tmxChunk struct {
 	Tiles  []tmxTile `xml:"tile"`
 }
 
+// maxTMXDepth bounds element nesting. encoding/xml keeps one stack entry per open element, even for an element it
+// skips, so without a bound a few bytes per level cost memory per level. Tiled writes about five levels.
+const maxTMXDepth = 64
+
+// depthLimited refuses a document nested deeper than maxTMXDepth before the decoder takes the next token.
+type depthLimited struct {
+	dec   *xml.Decoder
+	depth int
+}
+
+func (d *depthLimited) Token() (xml.Token, error) {
+	tok, err := d.dec.Token()
+	switch tok.(type) {
+	case xml.StartElement:
+		d.depth++
+		if d.depth > maxTMXDepth {
+			return nil, fmt.Errorf("element nesting deeper than %d", maxTMXDepth)
+		}
+	case xml.EndElement:
+		d.depth--
+	}
+	return tok, err
+}
+
 func parseTMX(r io.Reader) (width, height int, layers []layerSpec, err error) {
 	var doc tmxMapDocument
-	if err := xml.NewDecoder(r).Decode(&doc); err != nil {
+	if err := xml.NewTokenDecoder(&depthLimited{dec: xml.NewDecoder(r)}).Decode(&doc); err != nil {
 		return 0, 0, nil, fmt.Errorf("%w: %w", ErrMalformed, err)
 	}
 	for _, l := range doc.Layers {
