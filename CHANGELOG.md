@@ -6,6 +6,8 @@ Notable changes to `go-tilemask`. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-07
+
 ### Fixed
 
 - `ReadMask` reads its header line under a 64-byte limit; a header with no newline or a long digit run is `ErrMalformed`, and the error no longer echoes it.
@@ -23,5 +25,6 @@ Notable changes to `go-tilemask`. The format follows
 - `DecodeMap`: reads Tiled TMX and TMJ maps (CSV, tile lists, base64 with none, zlib or gzip) into each top-level tile layer's occupied tiles, under one tile cap for the whole map, with no layer or chunk allowed more values than it declared.
 - `MapSize`: reads a map's size from its root element or top-level object without decoding any layer.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-tilemask/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-tilemask/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Rethunk-Tech/go-tilemask/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rethunk-Tech/go-tilemask/releases/tag/v0.1.0
