@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -120,6 +121,18 @@ func TestDecodeMapLayersAndSize(t *testing.T) {
 	if len(m.Layers) != 2 || !slices.Equal(points(m, 0), []image.Point{{1, 0}, {2, 0}}) ||
 		!slices.Equal(points(m, 1), []image.Point{{2, 4}}) || m.Width != 3 || m.Height != 5 {
 		t.Fatalf("layers = %+v size %d x %d", m.Layers, m.Width, m.Height)
+	}
+}
+
+func TestDecodeMapBase64ByteBudgetDoesNotWrap(t *testing.T) {
+	t.Parallel()
+	doc := tmx(tmxLayerOf("L", 1<<62, 1, `<data encoding="base64">AQAAAA==</data>`))
+	m, err := decodeString(doc, TMX, Options{MaxTiles: math.MaxInt64})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Layers) != 1 || !slices.Equal(points(m, 0), []image.Point{{0, 0}}) {
+		t.Fatalf("tiles = %v", points(m, 0))
 	}
 }
 

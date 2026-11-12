@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -233,7 +234,11 @@ func decodeValues(text, encoding, compression string, limit int) ([]int, error) 
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrMalformed, err)
 	}
-	data, err := inflate(encoded, compression, int64(limit)*4)
+	byteCap := int64(limit) * 4
+	if int64(limit) > math.MaxInt64/4 {
+		byteCap = math.MaxInt64
+	}
+	data, err := inflate(encoded, compression, byteCap)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +282,11 @@ func inflate(data []byte, compression string, limit int64) ([]byte, error) {
 	default:
 		return nil, ErrUnsupported
 	}
-	out, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	need := limit
+	if need < math.MaxInt64 {
+		need++
+	}
+	out, err := io.ReadAll(io.LimitReader(reader, need))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrMalformed, err)
 	}
