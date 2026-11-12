@@ -2,6 +2,7 @@ package tilemask
 
 import (
 	"bytes"
+	"os"
 	"testing"
 )
 
@@ -44,6 +45,11 @@ func FuzzDecodePNG(f *testing.F) {
 }
 
 func FuzzReadMask(f *testing.F) {
+	golden, err := os.ReadFile("testdata/mask-gzip-19x5.gz")
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(golden)
 	var good bytes.Buffer
 	if _, err := patternMask(19, 5).WriteTo(&good); err != nil {
 		f.Fatal(err)
@@ -98,6 +104,40 @@ func FuzzDecodeMap(f *testing.F) {
 		}
 		if tiles > limit {
 			t.Fatalf("%d tiles decoded under a cap of %d", tiles, limit)
+		}
+	})
+}
+
+func FuzzMapSize(f *testing.F) {
+	for _, seed := range []struct {
+		doc []byte
+		xml bool
+	}{
+		{[]byte(`<?xml version="1.0"?><map version="1.10" width="30" height="20"><layer/></map>`), true},
+		{[]byte(`<map height="20" tilewidth="16" width="30"/>`), true},
+		{[]byte(`<map width="3" height="4"><layer width="9" height="9"/></map>`), true},
+		{[]byte(`<map width="0" height="4"/>`), true},
+		{[]byte(`<tileset width="3" height="4"/>`), true},
+		{[]byte(`{"layers":[{"width":9,"height":9}],"width":30,"height":20}`), false},
+		{[]byte(`{"width":-3,"height":4}`), false},
+		{[]byte(`<map/>`), false},
+	} {
+		f.Add(seed.doc, seed.xml)
+	}
+	f.Fuzz(func(t *testing.T, raw []byte, xmlFormat bool) {
+		format := TMJ
+		if xmlFormat {
+			format = TMX
+		}
+		w, h, err := MapSize(bytes.NewReader(raw), format)
+		if err != nil {
+			if w != 0 || h != 0 {
+				t.Fatalf("size with error: %d x %d (%v)", w, h, err)
+			}
+			return
+		}
+		if w <= 0 || h <= 0 {
+			t.Fatalf("accepted non-positive size %d x %d", w, h)
 		}
 	})
 }
