@@ -44,7 +44,8 @@ func readMaskHeader(br *bufio.Reader) (w, h int, err error) {
 // WriteTo writes the mask as gzip (best speed) of "W H\n" followed by the packed bits, and returns the compressed
 // bytes written. A mask with a non-positive size is refused, since ReadMask would refuse it.
 func (m *Mask) WriteTo(w io.Writer) (int64, error) {
-	if m.Width <= 0 || m.Height <= 0 || len(m.bits) != (m.Width*m.Height+7)/8 {
+	n, ok := maskBitBytes(m.Width, m.Height)
+	if m.Width <= 0 || m.Height <= 0 || !ok || len(m.bits) != n {
 		return 0, fmt.Errorf("%w: mask %d x %d", ErrMalformed, m.Width, m.Height)
 	}
 	cw := &countWriter{w: w}
@@ -92,6 +93,9 @@ func ReadMask(r io.Reader, opts Options) (*Mask, error) {
 		return nil, fmt.Errorf("%w: mask %d x %d", ErrMalformed, w, h)
 	}
 	if !areaWithin(w, h, opts.maxPixels()) {
+		return nil, ErrTooLarge
+	}
+	if _, ok := maskBitBytes(w, h); !ok {
 		return nil, ErrTooLarge
 	}
 	m := newMask(w, h)

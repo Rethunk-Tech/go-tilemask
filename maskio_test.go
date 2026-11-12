@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"math"
 	"os"
 	"runtime"
 	"testing"
@@ -74,6 +75,14 @@ func TestReadMaskRefusesAnOversizedHeaderBeforeAllocating(t *testing.T) {
 		if grew := after.TotalAlloc - before.TotalAlloc; grew > 64<<20 {
 			t.Errorf("refusing header %q allocated %d MiB", header, grew>>20)
 		}
+	}
+}
+
+func TestReadMaskMaxIntHeaderDoesNotPanic(t *testing.T) {
+	t.Parallel()
+	_, err := ReadMask(bytes.NewReader(gzipped(t, "9223372036854775807 1\n")), Options{MaxPixels: math.MaxInt64})
+	if !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("err = %v, want ErrTooLarge", err)
 	}
 }
 

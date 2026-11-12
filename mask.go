@@ -15,8 +15,27 @@ type Mask struct {
 	bits []byte
 }
 
+func maskBitBytes(w, h int) (int, bool) {
+	if w < 0 || h < 0 {
+		return 0, false
+	}
+	pixels := int64(w) * int64(h)
+	if h != 0 && pixels/int64(h) != int64(w) {
+		return 0, false
+	}
+	n := pixels / 8
+	if pixels%8 != 0 {
+		n++
+	}
+	if n > math.MaxInt || pixels > int64(math.MaxInt-7) {
+		return 0, false
+	}
+	return int(n), true
+}
+
 func newMask(w, h int) *Mask {
-	return &Mask{Width: w, Height: h, bits: make([]byte, (w*h+7)/8)}
+	n, _ := maskBitBytes(w, h)
+	return &Mask{Width: w, Height: h, bits: make([]byte, n)}
 }
 
 func (m *Mask) set(i int) { m.bits[i>>3] |= 1 << (i & 7) }
