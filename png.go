@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"math"
 )
 
 const pngSignature = "\x89PNG\r\n\x1a\n"
@@ -94,7 +95,7 @@ func fastPNG(raw []byte, maxPixels int64) (*Mask, error) {
 		m.setAll()
 		return m, nil
 	}
-	if !inflatePNG(m, hd) {
+	if !inflatePNG(m, hd, maxPixels) {
 		return nil, errFallback
 	}
 	return m, nil
@@ -116,9 +117,16 @@ func pngChannels(colorType byte) int {
 }
 
 // inflatePNG fills m from the unfiltered rows, and reports false when the stream cannot supply them all.
-func inflatePNG(m *Mask, hd pngHeader) bool {
+func inflatePNG(m *Mask, hd pngHeader, maxPixels int64) bool {
 	cpp := pngChannels(hd.colorType)
 	if cpp == 0 {
+		return false
+	}
+	rowBytes := int64(hd.w)*int64(cpp) + 1
+	if maxPixels <= math.MaxInt64/4 && rowBytes > 4*maxPixels {
+		return false
+	}
+	if rowBytes != int64(int(rowBytes)) {
 		return false
 	}
 	zr, err := zlib.NewReader(bytes.NewReader(hd.idat))
@@ -126,7 +134,7 @@ func inflatePNG(m *Mask, hd pngHeader) bool {
 		return false
 	}
 	defer func() { _ = zr.Close() }()
-	stride := hd.w*cpp + 1
+	stride := int(rowBytes)
 	row := make([]byte, stride)
 	prev := make([]byte, stride)
 	for y := range hd.h {

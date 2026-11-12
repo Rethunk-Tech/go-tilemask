@@ -89,6 +89,20 @@ func TestDecodePNGSixteenBitAllocationIsCapped(t *testing.T) {
 	}
 }
 
+// A wide 8-bit RGBA image at the pixel cap must not allocate two full-width rows
+// before falling back: those rows are ~8 bytes/pixel, past the 4×MaxPixels budget.
+func TestDecodePNGWideRGBARowDoesNotAllocatePastStdBudget(t *testing.T) {
+	const n = 4_000_000
+	raw := []byte(pngSignature)
+	raw = append(raw, pngChunk("IHDR", ihdr(n, 1, 8, 6, 0))...)
+	raw = append(raw, pngChunk("IDAT", []byte{0x78, 0x9c})...)
+	raw = append(raw, pngChunk("IEND", nil)...)
+	grew := allocatedBy(func() { _, _ = DecodePNG(bytes.NewReader(raw), Options{MaxPixels: n}) })
+	if grew > 64<<20 {
+		t.Errorf("allocated %d bytes", grew)
+	}
+}
+
 // A chunk length with the high bit set is negative as a 32-bit int.
 func TestDecodePNGHugeChunkLengthDoesNotPanic(t *testing.T) {
 	t.Parallel()
