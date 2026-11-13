@@ -116,6 +116,7 @@ func TestReadMaskRefusesDamage(t *testing.T) {
 		"no header":       gzipped(t, "hello"),
 		"zero width":      gzipped(t, "0 5\n"),
 		"negative":        gzipped(t, "-3 5\n"),
+		"trailing bytes":  gzipped(t, "2 2\n\x0f"+string(make([]byte, 1<<20))),
 	} {
 		if _, err := ReadMask(bytes.NewReader(raw), Options{}); !errors.Is(err, ErrMalformed) {
 			t.Errorf("%s: err = %v, want ErrMalformed", name, err)

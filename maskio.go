@@ -3,6 +3,7 @@ package tilemask
 import (
 	"bufio"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -105,8 +106,11 @@ func ReadMask(r io.Reader, opts Options) (*Mask, error) {
 	if rem := w * h & 7; rem != 0 {
 		m.bits[len(m.bits)-1] &= 1<<rem - 1
 	}
-	if _, err := io.Copy(io.Discard, br); err != nil {
-		return nil, fmt.Errorf("%w: trailer: %w", ErrMalformed, err)
+	// One byte past the bits is enough to refuse: reading on would inflate a gzip bomb nobody asked for. The read that
+	// finds the end also verifies the gzip trailer.
+	var extra [1]byte
+	if _, err := io.ReadFull(br, extra[:]); !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%w: data after the bits or bad trailer: %v", ErrMalformed, err)
 	}
 	return m, nil
 }
