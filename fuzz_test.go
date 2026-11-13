@@ -2,7 +2,9 @@ package tilemask
 
 import (
 	"bytes"
+	"image"
 	"os"
+	"slices"
 	"testing"
 )
 
@@ -138,6 +140,28 @@ func FuzzMapSize(f *testing.F) {
 		}
 		if w <= 0 || h <= 0 {
 			t.Fatalf("accepted non-positive size %d x %d", w, h)
+		}
+	})
+}
+
+// FuzzCells holds Cells to the brute-force projection for any rectangle, destination and cell size within its
+// coordinate bound, over a mask small enough to check pixel by pixel.
+func FuzzCells(f *testing.F) {
+	f.Add(uint8(48), uint8(40), 3, 5, 40, 34, 7, 9, 16)
+	f.Add(uint8(16), uint8(1), 0, 0, 16, 1, -15, 0, 16)
+	f.Add(uint8(20), uint8(20), -4, -9, 30, 25, -1, -1, 1)
+	f.Fuzz(func(t *testing.T, w, h uint8, x0, y0, x1, y1, dx, dy, cell int) {
+		m := patternMask(int(w%64), int(h%64))
+		src, dst := image.Rect(x0, y0, x1, y1), image.Pt(dx, dy)
+		got := slices.Collect(m.Cells(src, dst, cell))
+		if cell <= 0 || !coordOK(dst) || !coordOK(src.Min) {
+			if len(got) != 0 {
+				t.Fatalf("cell %d src %v dst %v yielded %v", cell, src, dst, got)
+			}
+			return
+		}
+		if want := bruteCells(m, src, dst, cell); !slices.Equal(got, want) {
+			t.Fatalf("cell %d src %v dst %v:\ngot  %v\nwant %v", cell, src, dst, got, want)
 		}
 	})
 }
