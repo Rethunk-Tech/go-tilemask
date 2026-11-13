@@ -207,15 +207,20 @@ var errBeyondDeclared = fmt.Errorf("%w: more values than the declared size", Err
 func decodeValues(text, encoding, compression string, limit int) ([]int, error) {
 	text = strings.TrimSpace(text)
 	if strings.EqualFold(encoding, "csv") {
+		fields := strings.Split(text, ",")
+		if n := len(fields); n > 0 && strings.TrimSpace(fields[n-1]) == "" {
+			fields = fields[:n-1]
+		}
 		var out []int
-		for value := range strings.SplitSeq(text, ",") {
+		for _, value := range fields {
 			value = strings.TrimSpace(value)
-			if value == "" {
-				continue
-			}
-			n, err := strconv.Atoi(value)
-			if err != nil {
-				return nil, fmt.Errorf("%w: tile %q", ErrMalformed, value)
+			var n int
+			if value != "" {
+				var err error
+				n, err = strconv.Atoi(value)
+				if err != nil {
+					return nil, fmt.Errorf("%w: tile %q", ErrMalformed, value)
+				}
 			}
 			if len(out) == limit {
 				return nil, errBeyondDeclared

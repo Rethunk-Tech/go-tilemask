@@ -124,6 +124,19 @@ func TestDecodeMapLayersAndSize(t *testing.T) {
 	}
 }
 
+func TestDecodeMapCSVEmptyFieldDoesNotShift(t *testing.T) {
+	t.Parallel()
+	doc := tmx(tmxLayerOf("L", 2, 2, `<data encoding="csv">1,,1,1</data>`))
+	m, err := decodeString(doc, TMX, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []image.Point{{0, 0}, {0, 1}, {1, 1}}
+	if !slices.Equal(points(m, 0), want) {
+		t.Fatalf("tiles = %v, want %v", points(m, 0), want)
+	}
+}
+
 func TestDecodeMapBase64ByteBudgetDoesNotWrap(t *testing.T) {
 	t.Parallel()
 	doc := tmx(tmxLayerOf("L", 1<<62, 1, `<data encoding="base64">AQAAAA==</data>`))
