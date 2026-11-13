@@ -124,6 +124,18 @@ func TestDecodeMapLayersAndSize(t *testing.T) {
 	}
 }
 
+func TestDecodeMapCSVErrorDoesNotEchoTheToken(t *testing.T) {
+	t.Parallel()
+	doc := tmx(tmxLayerOf("L", 1, 1, `<data encoding="csv">`+strings.Repeat("x", 10_000)+`</data>`))
+	_, err := decodeString(doc, TMX, Options{})
+	if !errors.Is(err, ErrMalformed) {
+		t.Fatalf("err = %v, want ErrMalformed", err)
+	}
+	if len(err.Error()) >= 200 {
+		t.Errorf("error echoes the token: %d bytes", len(err.Error()))
+	}
+}
+
 func TestDecodeMapCSVEmptyFieldDoesNotShift(t *testing.T) {
 	t.Parallel()
 	doc := tmx(tmxLayerOf("L", 2, 2, `<data encoding="csv">1,,1,1</data>`))

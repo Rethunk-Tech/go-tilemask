@@ -219,7 +219,7 @@ func decodeValues(text, encoding, compression string, limit int) ([]int, error) 
 				var err error
 				n, err = strconv.Atoi(value)
 				if err != nil {
-					return nil, fmt.Errorf("%w: tile %q", ErrMalformed, value)
+					return nil, fmt.Errorf("%w: tile value is not an integer", ErrMalformed)
 				}
 			}
 			if len(out) == limit {
