@@ -204,3 +204,18 @@ func TestMaskSetAllLeavesPaddingClear(t *testing.T) {
 		t.Fatalf("bits = %08b, want 11111111 00000001", m.bits)
 	}
 }
+
+type endlessReader struct{ read int64 }
+
+func (e *endlessReader) Read(p []byte) (int, error) { e.read += int64(len(p)); return len(p), nil }
+
+func TestDecodePNGBoundsInput(t *testing.T) {
+	t.Parallel()
+	r := &endlessReader{}
+	if _, err := DecodePNG(r, Options{MaxPixels: 1}); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("err = %v, want ErrTooLarge", err)
+	}
+	if r.read > 1<<20 {
+		t.Errorf("read %d bytes for MaxPixels 1", r.read)
+	}
+}

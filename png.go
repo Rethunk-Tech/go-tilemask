@@ -18,7 +18,9 @@ const pngSignature = "\x89PNG\r\n\x1a\n"
 // errFallback sends an input the fast path cannot read to image/png.
 var errFallback = errors.New("tilemask: use image/png")
 
-// DecodePNG reads r to the end and returns the mask of pixels whose alpha is not zero.
+// DecodePNG reads r to the end and returns the mask of pixels whose alpha is not zero. It reads at most
+// 8 bytes per permitted pixel plus 64 KiB (the most a 16-bit RGBA image can need, uncompressed); more input
+// returns ErrTooLarge.
 //
 // The size the IHDR claims is checked against opts.MaxPixels before any pixel buffer exists. Eight-bit,
 // non-interlaced images are read by a fast path that skips what a mask does not need: it checks no chunk CRC and no
@@ -26,15 +28,27 @@ var errFallback = errors.New("tilemask: use image/png")
 // (every pixel is set), and ignores data after the rows it needs. Each of those errs toward more coverage, never
 // less. Everything else, and an image the fast path cannot inflate, goes through image/png.
 func DecodePNG(r io.Reader, opts Options) (*Mask, error) {
-	raw, err := io.ReadAll(r)
+	limit := pngInputLimit(opts.maxPixels())
+	raw, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("tilemask: read png: %w", err)
+	}
+	if int64(len(raw)) > limit {
+		return nil, ErrTooLarge
 	}
 	m, err := fastPNG(raw, opts.maxPixels())
 	if errors.Is(err, errFallback) {
 		return stdPNG(raw, opts.maxPixels())
 	}
 	return m, err
+}
+
+func pngInputLimit(maxPixels int64) int64 {
+	const slack = 64 << 10
+	if maxPixels > (math.MaxInt64-slack)/8 {
+		return math.MaxInt64 - 1
+	}
+	return maxPixels*8 + slack
 }
 
 type pngHeader struct {
