@@ -109,8 +109,11 @@ func ReadMask(r io.Reader, opts Options) (*Mask, error) {
 	// One byte past the bits is enough to refuse: reading on would inflate a gzip bomb nobody asked for. The read that
 	// finds the end also verifies the gzip trailer.
 	var extra [1]byte
-	if _, err := io.ReadFull(br, extra[:]); !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("%w: data after the bits or bad trailer: %v", ErrMalformed, err)
+	switch _, err := io.ReadFull(br, extra[:]); {
+	case err == nil:
+		return nil, fmt.Errorf("%w: data after the bits", ErrMalformed)
+	case !errors.Is(err, io.EOF):
+		return nil, fmt.Errorf("%w: trailer: %w", ErrMalformed, err)
 	}
 	return m, nil
 }
