@@ -240,6 +240,60 @@ func TestDecodeMapHoldsEveryEncodingToTheDeclaredSize(t *testing.T) {
 	}
 }
 
+func TestDecodeMapEmptyLayerDataOccupiesNothing(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name, doc string
+		f         Format
+	}{
+		{"tmj null", `{"width":2,"height":2,"layers":[{"name":"L","width":2,"height":2,"data":null}]}`, TMJ},
+		{"tmx empty base64", tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64"></data>`)), TMX},
+	} {
+		m, err := decodeString(c.doc, c.f, Options{})
+		if err != nil || len(m.Layers) != 1 || len(m.Layers[0].Tiles) != 0 {
+			t.Errorf("%s: %+v %v", c.name, m, err)
+		}
+	}
+}
+
+func TestDecodeMapBase64AllowsInteriorWhitespace(t *testing.T) {
+	t.Parallel()
+	// Tiled wraps long base64; the decoder must drop spaces without shifting 32-bit tiles.
+	doc := tmx(tmxLayerOf("L", 1, 1, `<data encoding="base64">AQAA AA==</data>`))
+	m, err := decodeString(doc, TMX, Options{})
+	if err != nil || !slices.Equal(points(m, 0), []image.Point{{0, 0}}) {
+		t.Fatalf("tiles = %v err = %v, want (0,0)", points(m, 0), err)
+	}
+}
+
+func TestBrokenTilePayloadsAreMalformed(t *testing.T) {
+	t.Parallel()
+	gzRaw, err := base64.StdEncoding.DecodeString(compressed(t, "gzip", gids(1, 2, 3, 4, 5, 6, 7, 8)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	trunc := base64.StdEncoding.EncodeToString(gzRaw[:12])
+	for name, c := range map[string]struct {
+		doc string
+		f   Format
+	}{
+		"tmj non-integer": {`{"layers":[{"name":"L","width":1,"height":1,"data":[true]}]}`, TMJ},
+		"zlib header":     {tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64" compression="zlib">AAAA</data>`)), TMX},
+		"gzip header":     {tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64" compression="gzip">AAAA</data>`)), TMX},
+		"gzip truncated":  {tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64" compression="gzip">`+trunc+`</data>`)), TMX},
+	} {
+		if _, err := decodeString(c.doc, c.f, Options{}); !errors.Is(err, ErrMalformed) {
+			t.Errorf("%s: err = %v, want ErrMalformed", name, err)
+		}
+	}
+	if _, err := tmjValues([]byte(`"`), "")(1); !errors.Is(err, ErrMalformed) {
+		t.Errorf("unterminated quoted data: %v", err)
+	}
+	if _, err := tmjInts(nil, 1); !errors.Is(err, ErrMalformed) {
+		t.Errorf("array with no start token: %v", err)
+	}
+}
+
 func TestDecodeMapRefusesWhatItCannotRead(t *testing.T) {
 	t.Parallel()
 	zstd := tmx(tmxLayerOf("L", 2, 2, `<data encoding="base64" compression="zstd">AAAA</data>`))

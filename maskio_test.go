@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"io"
 	"math"
 	"os"
 	"runtime"
@@ -142,6 +143,33 @@ func TestWriteToRefusesWhatReadMaskWould(t *testing.T) {
 	for _, m := range []*Mask{{}, {Width: 3, Height: 3}} {
 		if _, err := m.WriteTo(&bytes.Buffer{}); !errors.Is(err, ErrMalformed) {
 			t.Errorf("%dx%d: err = %v, want ErrMalformed", m.Width, m.Height, err)
+		}
+	}
+}
+
+// failOnCall refuses after `after` successful Write calls, so a test can pin each stage of WriteTo.
+type failOnCall struct {
+	after, n int
+}
+
+func (f *failOnCall) Write(p []byte) (int, error) {
+	f.n++
+	if f.n > f.after {
+		return 0, io.ErrClosedPipe
+	}
+	return len(p), nil
+}
+
+func TestWriteToReportsWhenTheSinkRefuses(t *testing.T) {
+	t.Parallel()
+	// gzip buffers a small payload until Close; 1024x512 packed bits fill a deflate block so the bits write reaches the sink.
+	m := newMask(1024, 512)
+	for i := range m.bits {
+		m.bits[i] = byte(i)
+	}
+	for _, after := range []int{0, 1, 4} {
+		if _, err := m.WriteTo(&failOnCall{after: after}); !errors.Is(err, io.ErrClosedPipe) {
+			t.Errorf("fail on write %d: %v", after+1, err)
 		}
 	}
 }
