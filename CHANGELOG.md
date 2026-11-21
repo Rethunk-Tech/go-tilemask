@@ -6,6 +6,12 @@ Notable changes to `go-tilemask`. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `DecodePNG` bounds its input by `MaxPixels`, and fast-path row buffers over the `4×MaxPixels` budget are skipped.
+- A mask refuses data after its bits instead of inflating it, returns `ErrTooLarge` when a max-int header overflows the bits slice, and wraps the trailer error.
+- Tiled: empty CSV fields no longer shift later GIDs, a non-integer CSV token is left out of the error, and the base64 tile byte budget no longer wraps.
+
 ## [0.1.1] - 2026-11-07
 
 ### Fixed
